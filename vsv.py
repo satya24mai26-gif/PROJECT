@@ -50,7 +50,7 @@ THEMES = {
         "hover_bg": "#a5d6a7",
         "card_fg": "black",
         "shadow": "black",              # hex for halo color in dark (example teal)
-        "shadow_opacity": 60,            # 0-255 alpha for shadow
+        "shadow_opacity": 10,            # 0-255 alpha for shadow
         "shadow_blur": 18,                # normal blur
         "shadow_blur_hover": 30,          # stronger blur on hover
         "shadow_opacity_hover": 230,      # stronger shadow alpha on hover
@@ -65,7 +65,10 @@ THEMES = {
 }
 
 
-current_theme = "dark"
+current_theme = "light"
+
+open_windows = {}   # { "enrollment": window, "attendance": window, ... } vsv
+
 
 def make_shadow_image(width, height, radius=20, shadow_color="#000000", blur_radius=12, offset=(5,5)):
     """Create a blurred shadow rectangle image"""
@@ -204,13 +207,13 @@ def load_course_face_encodings(course_name: str):
     return known_encodings, known_ids, known_labels
 
 # ---------- Styled helpers ----------
-def neon_entry(parent, var=None, readonly=False, width=28):
+def neon_entry(parent, var=None, readonly=False, width=28, bg = "white"):
     e = tk.Entry(
         parent,
         textvariable=var,
         width=width,
-        bg="#101010",
-        fg="#00ffff",
+        #bg="#101010",
+        #fg="#00ffff",
         insertbackground="#00ffff",
         relief="flat",
         highlightthickness=1,
@@ -219,7 +222,7 @@ def neon_entry(parent, var=None, readonly=False, width=28):
         font=("Segoe UI", 12),
     )
     if readonly:
-        e.config(state="readonly", readonlybackground="#101010")
+        e.config(state="readonly", readonlybackground=bg)
     e.pack(pady=4, fill="x")
     return e
 
@@ -242,10 +245,34 @@ def neon_button(parent, text, command, bg="#0aa", fg="white"):
 
 # ---------- Enrollment ----------
 def open_enrollment():
+    # If already open → focus it
+    if "enrollment" in open_windows:
+        win = open_windows["enrollment"]
+        if win.winfo_exists():   # window still alive
+            win.deiconify()
+            win.lift()
+            win.focus_force()
+            return
+        else:
+            # stale reference, remove it
+            open_windows.pop("enrollment", None)
+
+    # Otherwise create new window
     win = tk.Toplevel(root)
     win.title("Enrollment")
-    #win.configure(bg=THEMES["bg"])
     win.geometry("880x560")
+    open_windows["enrollment"] = win
+
+    # unregister when user closes window
+    def on_close():
+        if "enrollment" in open_windows:
+            open_windows.pop("enrollment")
+        win.destroy()
+
+    win.protocol("WM_DELETE_WINDOW", on_close)
+    
+    theme = THEMES[current_theme]
+    win.configure(bg=theme["bg"])
 
     form = tk.Frame(win) #tk.Frame(win, bg="#1e1e1e")
     form.pack(side="left", padx=20, pady=20, fill="y")
@@ -253,8 +280,8 @@ def open_enrollment():
         form,
         text="Register Student",
         font=("Segoe UI", 18, "bold"),
-        #fg="white",
-        #bg="#1e1e1e",
+        fg=theme["fg"],
+        bg=theme["bg"],
     ).pack(pady=(0, 10))
 
     # fetch distinct courses from database
@@ -265,7 +292,7 @@ def open_enrollment():
 
     vars_map = {}
     for label in ["Reg No", "Name", "Course", "Mobile"]:
-        tk.Label(form, text=f"{label}:", fg="white", bg="#1e1e1e", font=("Segoe UI", 11)).pack(
+        tk.Label(form, text=f"{label}:", fg=theme["fg"], bg=theme["bg"], font=("Segoe UI", 11)).pack(
             anchor="w"
         )
         if label == "Course":
@@ -273,9 +300,10 @@ def open_enrollment():
             ent.pack(fill="x", pady=5)
             ent.set("")   # empty by default, user can select or type
         else:
-            ent = tk.Entry(form, font=("Segoe UI", 13), bg="#101010", fg="white", relief="flat")
+            ent = tk.Entry(form, font=("Segoe UI", 13), bg=theme["bg"], fg=theme["fg"], relief="solid")
             ent.pack(fill="x", pady=5)
         vars_map[label] = ent
+
 
     # Camera preview
     video_frame = tk.Frame(win) #, bg="#1e1e1e")
@@ -361,10 +389,30 @@ def open_enrollment():
 
 # ---------- Attendance: SINGLE + GROUP + COURSE (shared camera frame grabber) ----------
 def open_attendance():
+    if "attendance" in open_windows:
+        win = open_windows["attendance"]
+        if win.winfo_exists():
+            win.deiconify()
+            win.lift()
+            win.focus_force()
+            return
+        else:
+            open_windows.pop("attendance", None)
+
     win = tk.Toplevel(root)
     win.title("Attendance")
-    win.configure(bg="#0d0d0d")
     win.geometry("1280x780")
+    open_windows["attendance"] = win
+
+    def on_close():
+        if "attendance" in open_windows:
+            open_windows.pop("attendance")
+        win.destroy()
+
+    win.protocol("WM_DELETE_WINDOW", on_close)
+
+    theme = THEMES[current_theme]
+    win.configure(bg=theme["bg"])
 
     nb = ttk.Notebook(win)
     nb.pack(fill="both", expand=True)
@@ -390,38 +438,38 @@ def open_attendance():
 
 
     # --- GROUP TAB ---
-    group_tab = tk.Frame(nb, bg="#0b0b0b")
+    group_tab = tk.Frame(nb, bg=theme["bg"])
     nb.add(group_tab, text="Group")
 
-    top_bar = tk.Frame(group_tab, bg="#0b0b0b")
+    top_bar = tk.Frame(group_tab, bg=theme["bg"])
     top_bar.pack(fill="x", padx=16, pady=10)
 
-    tk.Label(top_bar, text="Group Attendance (Multi-Face)", font=("Segoe UI", 16, "bold"), fg="#00ffcc", bg="#0b0b0b").pack(side="left")
+    tk.Label(top_bar, text="Group Attendance (Multi-Face)", font=("Segoe UI", 16, "bold"), fg="#00ffcc", bg=theme["bg"]).pack(side="left")
 
     btn_reload = tk.Button(top_bar, text="Reload Faces", bg="#2d89ef", fg="white", bd=0)
     btn_reload.pack(side="right", padx=6)
 
-    body = tk.Frame(group_tab, bg="#0b0b0b")
+    body = tk.Frame(group_tab, bg=theme["bg"])
     body.pack(fill="both", expand=True, padx=16, pady=10)
 
     # Left: camera
-    cam_frame = tk.Frame(body, bg="#0b0b0b")
+    cam_frame = tk.Frame(body, bg=theme["bg"])
     cam_frame.pack(side="left", fill="both", expand=True)
 
-    lbl_cam_title = tk.Label(cam_frame, text="Live Camera", font=("Segoe UI", 14, "bold"), fg="#9effa0", bg="#0b0b0b")
+    lbl_cam_title = tk.Label(cam_frame, text="Live Camera", font=("Segoe UI", 14, "bold"), fg="#9effa0", bg=theme["bg"])
     lbl_cam_title.pack(anchor="w")
 
-    lbl_cam = tk.Label(cam_frame, bg="#101010", width=CAM_WIDTH, height=CAM_HEIGHT)
+    lbl_cam = tk.Label(cam_frame, bg=theme["bg"], width=CAM_WIDTH, height=CAM_HEIGHT)
     lbl_cam.pack(pady=10, fill="both", expand=False)
 
-    lbl_cam_status = tk.Label(cam_frame, text="Loading faces…", fg="#b0b0b0", bg="#0b0b0b", font=("Segoe UI", 11))
+    lbl_cam_status = tk.Label(cam_frame, text="Loading faces…", fg="#b0b0b0", bg=theme["bg"], font=("Segoe UI", 11))
     lbl_cam_status.pack(anchor="w")
 
     # Right: present list
-    side = tk.Frame(body, width=360, bg="#111111")
+    side = tk.Frame(body, width=360, bg=theme["bg"])
     side.pack(side="right", fill="y")
 
-    tk.Label(side, text="Marked Present (Today)", font=("Segoe UI", 13, "bold"), fg="white", bg="#111111").pack(anchor="w", padx=12, pady=(10, 6))
+    tk.Label(side, text="Marked Present (Today)", font=("Segoe UI", 13, "bold"), fg=theme["fg"], bg=theme["bg"]).pack(anchor="w", padx=12, pady=(10, 6))
 
     cols = ("Reg No", "Name", "Time")
     tv = ttk.Treeview(side, columns=cols, show="headings", height=16)
@@ -441,13 +489,13 @@ def open_attendance():
         pass
     style.configure(
         "Treeview",
-        background="#1f1f1f",
-        foreground="white",
-        fieldbackground="#1f1f1f",
+        background=theme["bg"],
+        foreground=theme["fg"],
+        fieldbackground=theme["bg"],
         rowheight=24,
         borderwidth=0,
     )
-    style.configure("Treeview.Heading", background="#191919", foreground="white", font=("Segoe UI", 10, "bold"))
+    style.configure("Treeview.Heading", background=theme["bg"], foreground=theme["fg"], font=("Segoe UI", 10, "bold"))
 
     # Load already marked today
     today = datetime.now().strftime("%Y-%m-%d")
@@ -585,14 +633,14 @@ def open_attendance():
     loop_frame_group()
 
     # --- COURSE TAB (NEW) ---
-    course_tab = tk.Frame(nb, bg="#0b0b0b")
+    course_tab = tk.Frame(nb, bg=theme["bg"])
     nb.add(course_tab, text="Course")
 
-    top_bar_c = tk.Frame(course_tab, bg="#0b0b0b")
+    top_bar_c = tk.Frame(course_tab, bg=theme["bg"])
     top_bar_c.pack(fill="x", padx=16, pady=10)
 
     tk.Label(top_bar_c, text="Course Attendance", font=("Segoe UI", 16, "bold"),
-             fg="#00ffcc", bg="#0b0b0b").pack(side="left")
+             fg="#00ffcc", bg=theme["bg"]).pack(side="left")
 
     course_select_var = tk.StringVar()
     course_combo = ttk.Combobox(top_bar_c, textvariable=course_select_var, width=28, state="readonly")
@@ -613,29 +661,29 @@ def open_attendance():
     btn_load_course_faces.pack(side="left", padx=6)
 
     # Body split like group: left camera, right present list
-    body_c = tk.Frame(course_tab, bg="#0b0b0b")
+    body_c = tk.Frame(course_tab, bg=theme["bg"])
     body_c.pack(fill="both", expand=True, padx=16, pady=10)
 
     # Left camera area
-    cam_frame_c = tk.Frame(body_c, bg="#0b0b0b")
+    cam_frame_c = tk.Frame(body_c, bg=theme["bg"])
     cam_frame_c.pack(side="left", fill="both", expand=True)
 
     tk.Label(cam_frame_c, text="Live Camera", font=("Segoe UI", 14, "bold"),
-             fg="#9effa0", bg="#0b0b0b").pack(anchor="w")
+             fg="#9effa0", bg=theme["bg"]).pack(anchor="w")
 
-    lbl_cam_c = tk.Label(cam_frame_c, bg="#101010", width=CAM_WIDTH, height=CAM_HEIGHT)
+    lbl_cam_c = tk.Label(cam_frame_c, bg=theme["bg"], width=CAM_WIDTH, height=CAM_HEIGHT)
     lbl_cam_c.pack(pady=10, fill="both", expand=False)
 
     lbl_cam_status_c = tk.Label(cam_frame_c, text="Select a course and click 'Load Course Faces'",
-                                fg="#b0b0b0", bg="#0b0b0b", font=("Segoe UI", 11))
+                                fg="#b0b0b0", bg=theme["bg"], font=("Segoe UI", 11))
     lbl_cam_status_c.pack(anchor="w")
 
     # Right present list
-    side_c = tk.Frame(body_c, width=360, bg="#111111")
+    side_c = tk.Frame(body_c, width=360, bg=theme["bg"])
     side_c.pack(side="right", fill="y")
 
     title_c = tk.Label(side_c, text="Marked Present (Today, by Course)",
-                       font=("Segoe UI", 13, "bold"), fg="white", bg="#111111")
+                       font=("Segoe UI", 13, "bold"), fg=theme["fg"], bg=theme["bg"])
     title_c.pack(anchor="w", padx=12, pady=(10, 6))
 
     cols_c = ("Reg No", "Name", "Time")
@@ -647,6 +695,23 @@ def open_attendance():
     tv_c.configure(yscrollcommand=vs_c.set)
     tv_c.pack(side="left", fill="both", expand=True, padx=(12, 0), pady=(0, 12))
     vs_c.pack(side="left", fill="y", padx=(0, 12), pady=(0, 12))
+
+    # Style
+    style = ttk.Style()
+    try:
+        style.theme_use("clam")
+    except Exception:
+        pass
+    style.configure(
+        "Treeview",
+        background=theme["bg"],
+        foreground=theme["fg"],
+        fieldbackground=theme["bg"],
+        rowheight=24,
+        borderwidth=0,
+    )
+    style.configure("Treeview.Heading", background=theme["bg"], foreground=theme["fg"], font=("Segoe UI", 10, "bold"))
+
 
     # Recognition state for course tab
     known_enc_c, known_ids_c, known_labels_c = [], [], []
@@ -804,13 +869,13 @@ def open_attendance():
     win.protocol("WM_DELETE_WINDOW", on_close)
 
     # --- SINGLE TAB ---
-    single_tab = tk.Frame(nb, bg="#0d0d0d")
+    single_tab = tk.Frame(nb, bg=theme["bg"])
     nb.add(single_tab, text="Single")
 
-    left = tk.Frame(single_tab, bg="#0d0d0d")
+    left = tk.Frame(single_tab, bg=theme["bg"])
     left.pack(side="left", fill="y", padx=20, pady=20)
 
-    tk.Label(left, text="Single Student", font=("Segoe UI", 18, "bold"), fg="#00ffff", bg="#0d0d0d").pack(
+    tk.Label(left, text="Single Student", font=("Segoe UI", 18, "bold"), fg="#00ffff", bg=theme["bg"]).pack(
         pady=(0, 10)
     )
 
@@ -820,27 +885,27 @@ def open_attendance():
     course_var = tk.StringVar()
     photo_var = tk.StringVar()
 
-    tk.Label(left, text="Reg No:", bg="#0d0d0d", fg="#00ffff", font=("Segoe UI", 11)).pack(anchor="w")
+    tk.Label(left, text="Reg No:", bg=theme["bg"], fg="#00ffff", font=("Segoe UI", 11)).pack(anchor="w")
     reg_entry = neon_entry(left, reg_var)
     reg_entry.focus_set()
 
-    btn_row = tk.Frame(left, bg="#0d0d0d")
+    btn_row = tk.Frame(left, bg=theme["bg"])
     btn_row.pack(fill="x", pady=(6, 10))
 
     # Right side for single mode
-    right_single = tk.Frame(single_tab, bg="#0d0d0d")
+    right_single = tk.Frame(single_tab, bg=theme["bg"])
     right_single.pack(side="right", fill="both", expand=True, padx=20, pady=20)
 
     preview_title_s = tk.Label(
-        right_single, text="Live Camera", font=("Segoe UI", 14, "bold"), fg="#00ff88", bg="#0d0d0d"
+        right_single, text="Live Camera", font=("Segoe UI", 14, "bold"), fg="#00ff88", bg=theme["bg"]
     )
     preview_title_s.pack(anchor="w")
 
-    preview_label_s = tk.Label(right_single, bg="#101010", width=CAM_WIDTH, height=CAM_HEIGHT)
+    preview_label_s = tk.Label(right_single, bg=theme["bg"], width=CAM_WIDTH, height=CAM_HEIGHT)
     preview_label_s.pack(pady=10)
 
     status_lbl_s = tk.Label(
-        right_single, text="Waiting for student...", fg="#b0b0b0", bg="#0d0d0d", font=("Segoe UI", 11)
+        right_single, text="Waiting for student...", fg=theme["fg"], bg=theme["bg"], font=("Segoe UI", 11)
     )
     status_lbl_s.pack(anchor="w")
 
@@ -983,8 +1048,8 @@ def open_attendance():
 
     # Student readonly info
     for label, var in [("Name", name_var), ("Course", course_var), ("Photo Path", photo_var)]:
-        tk.Label(left, text=f"{label}:", bg="#0d0d0d", fg="white").pack(anchor="w", pady=(8, 0))
-        neon_entry(left, var, readonly=True)
+        tk.Label(left, text=f"{label}:", bg=theme["bg"], fg=theme["fg"]).pack(anchor="w", pady=(8, 0))
+        neon_entry(left, var, readonly=True, bg=theme["bg"])
 
     reg_entry.bind("<Return>", lambda e: do_fetch())
     loop_frame_single()
@@ -992,11 +1057,30 @@ def open_attendance():
 
 # ---------- Reports (filters + search + export) ----------
 def open_reports():
-    win = tk.Toplevel(root)
-    win.title("Attendance Reports")
-    win.geometry("1060x680")
-    win.configure(bg="#1e1e1e")
+    if "reports" in open_windows:
+        win = open_windows["reports"]
+        if win.winfo_exists():
+            win.deiconify()
+            win.lift()
+            win.focus_force()
+            return
+        else:
+            open_windows.pop("reports", None)
 
+    win = tk.Toplevel(root)
+    win.title("Reports")
+    win.geometry("1060x680")
+    open_windows["reports"] = win
+
+    def on_close():
+        if "reports" in open_windows:
+            open_windows.pop("reports")
+        win.destroy()
+
+    theme = THEMES[current_theme]
+    win.configure(bg=theme["bg"])
+
+    win.protocol("WM_DELETE_WINDOW", on_close)
     date_var = tk.StringVar()
     search_var = tk.StringVar()
     course_filter_var = tk.StringVar()  # optional extra filter
@@ -1090,7 +1174,7 @@ def open_reports():
             rows = [""] + [r[0] for r in cur.fetchall()]
         course_combo["values"] = rows
 
-    top = tk.Frame(win, bg="#1e1e1e")
+    top = tk.Frame(win, bg=theme["bg"])
     top.pack(fill="x", padx=12, pady=10)
     tk.Label(top, text="Date:", fg="white", bg="#1e1e1e").pack(side="left")
     date_combo = ttk.Combobox(top, textvariable=date_var, width=16)
@@ -1116,8 +1200,8 @@ def open_reports():
         pass
     style.configure(
         "Treeview",
-        background="#2b2b2b",
-        foreground="white",
+        background=theme["bg"],
+        foreground=theme["fg"],
         fieldbackground="#2b2b2b",
         rowheight=26,
         borderwidth=0,
@@ -1142,14 +1226,36 @@ def open_reports():
 
 # ---------- Tools (QR, DB backup/restore, exports, summary) ----------
 def open_view_students():
+    if "tools" in open_windows:
+        win = open_windows["tools"]
+        if win.winfo_exists():
+            win.deiconify()
+            win.lift()
+            win.focus_force()
+            return
+        else:
+            open_windows.pop("tools", None)
+
     win = tk.Toplevel(root)
-    win.title("Manage Students")
-    win.geometry("850x500")
+    win.title("Tools")
+    win.geometry("880x620")
+    open_windows["tools"] = win
+
+    def on_close():
+        if "tools" in open_windows:
+            open_windows.pop("tools")
+        win.destroy()
+
+    win.protocol("WM_DELETE_WINDOW", on_close)
+
+
+    theme = THEMES[current_theme]
+    win.configure(bg=theme["bg"])
 
     # --- Add this ---
-    win.transient(root)           # attach to main root
-    win.grab_set()                # make modal (block clicks on root)
-    win.focus_force()             # force focus
+    #win.transient(root)           # attach to main root
+    #win.grab_set()                # make modal (block clicks on root)
+    #win.focus_force()             # force focus
 
     # --- Search Bar ---
     search_frame = tk.Frame(win)
@@ -1302,13 +1408,15 @@ def open_tools_window():
     win = tk.Toplevel(root)
     win.title("Tools")
     win.geometry("880x620")
-    win.configure(bg="#161616")
 
-    frm_qr = tk.LabelFrame(win, text="QR Code Generator", bg="#161616", fg="white", padx=10, pady=10)
+    theme = THEMES[current_theme]
+    win.configure(bg=theme["bg"])
+
+    frm_qr = tk.LabelFrame(win, text="QR Code Generator", bg=theme["bg"], fg=theme["fg"], padx=10, pady=10)
     frm_qr.pack(fill="x", padx=12, pady=(12, 6))
-    tk.Label(frm_qr, text="Reg No:", bg="#161616", fg="white").grid(row=0, column=0, sticky="w")
+    tk.Label(frm_qr, text="Reg No:", bg=theme["bg"], fg=theme["fg"]).grid(row=0, column=0, sticky="w")
     qr_reg = tk.StringVar()
-    tk.Entry(frm_qr, textvariable=qr_reg, width=24, bg="#101010", fg="white", relief="flat").grid(row=0, column=1, padx=8)
+    tk.Entry(frm_qr, textvariable=qr_reg, width=24, bg=theme["bg"], fg=theme["fg"], relief="flat").grid(row=0, column=1, padx=8)
 
     def gen_qr():
         r = qr_reg.get().strip()
@@ -1321,7 +1429,7 @@ def open_tools_window():
 
     tk.Button(frm_qr, text="Generate", command=gen_qr, bg="#4CAF50", fg="white").grid(row=0, column=2, padx=8)
 
-    frm_db = tk.LabelFrame(win, text="Database Backup / Restore", bg="#161616", fg="white", padx=10, pady=10)
+    frm_db = tk.LabelFrame(win, text="Database Backup / Restore", fg=theme["fg"], bg=theme["bg"], padx=10, pady=10)
     frm_db.pack(fill="x", padx=12, pady=6)
 
     def backup_db():
@@ -1345,7 +1453,7 @@ def open_tools_window():
     tk.Button(frm_db, text="Backup", command=backup_db, bg="#2196F3", fg="white").pack(side="left", padx=8)
     tk.Button(frm_db, text="Restore", command=restore_db, bg="#f39c12", fg="white").pack(side="left", padx=8)
 
-    frm_students = tk.LabelFrame(win, text="Export Student List", bg="#161616", fg="white", padx=10, pady=10)
+    frm_students = tk.LabelFrame(win, text="Export Student List", fg=theme["fg"], bg=theme["bg"], padx=10, pady=10)
     frm_students.pack(fill="x", padx=12, pady=6)
 
     def export_students():
@@ -1374,7 +1482,7 @@ def open_tools_window():
         frm_students, text="Export Students", command=export_students, bg="#8e44ad", fg="white"
     ).pack(side="left", padx=8)
 
-    frm_sum = tk.LabelFrame(win, text="Attendance Summary (Per Day)", bg="#161616", fg="white", padx=10, pady=10)
+    frm_sum = tk.LabelFrame(win, text="Attendance Summary (Per Day)", fg=theme["fg"], bg=theme["bg"], padx=10, pady=10)
     frm_sum.pack(fill="both", expand=True, padx=12, pady=(6, 12))
 
     sum_cols = ("Date", "Present Count")
@@ -1423,7 +1531,7 @@ def open_tools_window():
             df.to_excel(path, index=False)
         messagebox.showinfo("Exported", f"Saved: {path}")
 
-    btns = tk.Frame(frm_sum, bg="#161616")
+    btns = tk.Frame(frm_sum, bg=theme["bg"])
     btns.pack(side="left", fill="y", padx=10)
     tk.Button(btns, text="Load Summary", command=load_summary, bg="#16a085", fg="white").pack(pady=6, fill="x")
     tk.Button(btns, text="Export Summary", command=export_summary, bg="#2980b9", fg="white").pack(pady=6, fill="x")
@@ -1681,7 +1789,6 @@ make_card(grid, "🛠", "Tools", open_tools_window).grid(row=1, column=1, padx=0
 
 apply_theme()
 
-print(root)
 
 def exit_app():
     if messagebox.askyesno("Exit", "Close the dashboard?"):

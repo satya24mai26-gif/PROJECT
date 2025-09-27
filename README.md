@@ -89,5 +89,6 @@ The **Tools** window provides essential management capabilities:
 * **Data Exports:** Separate functions to export the complete **Student List** and the **Attendance Summary** (count per day).
 
 
-  #app link🖇️
+
+## app link🖇️
   (coming soon😁)

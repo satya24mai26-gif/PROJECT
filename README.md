@@ -24,13 +24,7 @@ You need **Python 3.x** installed. The system relies on several core libraries, 
 
 ### Installation Steps
 
-1.  **Clone the Repository:**
-    ```bash
-    git clone [YOUR_REPO_URL]
-    cd smart-attendance-management-system
-    ```
-
-2.  **Install Dependencies:**
+1.  **Install Dependencies:**
     Use `pip` to install all required libraries:
     ```bash
     pip install Pillow opencv-python face-recognition pandas qrcode pyzbar

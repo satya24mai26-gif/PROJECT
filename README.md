@@ -91,4 +91,4 @@ The **Tools** window provides essential management capabilities:
 
 
 ## app link🖇️
-  (coming soon😁)
+  https://github.com/satya24mai26-gif/PROJECT/releases/download/v1.0/Smart.Attendance.Management.System.exe

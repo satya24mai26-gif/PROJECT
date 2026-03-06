@@ -383,6 +383,110 @@ Test FAISS index updates carefully.
 
 ---
 
+# Surveillance-Based Recognition Memory System
+
+## Concept
+
+In crowded environments such as classrooms or seminar halls, repeatedly performing
+face recognition on the same visible individuals can significantly reduce system
+efficiency. To address this issue, the system introduces a **Surveillance-Based
+Recognition Memory System**.
+
+Once a face is successfully matched with a stored facial embedding, the system assigns
+the corresponding identity (registration number) to that tracked person and stores it
+temporarily in an **active identity memory**.
+
+As long as the individual remains within the camera field of view, the system does not
+attempt to perform face recognition again for that person. Instead, the system continues
+tracking the individual using a lightweight face tracking mechanism.
+
+This approach ensures that the recognition module focuses primarily on **new or
+unidentified faces**, which significantly improves the efficiency of attendance
+collection in crowded environments.
+
+---
+
+## Recognition Pipeline with Identity Memory
+
+The modified recognition pipeline operates as follows:
+
+Camera Frame ↓ Face Detection ↓ Face Tracking ↓ Identity Memory Check ↓ If identity known → skip recognition If identity unknown → perform FAISS similarity search ↓ Attendance Recording
+
+When a face is recognized successfully, the identity is stored in a temporary memory
+structure associated with the tracking identifier.
+
+---
+
+## Active Identity Memory Table
+
+The system maintains a temporary table of recognized individuals currently visible in
+the camera view.
+
+Example structure:
+
+TrackID   RegNo      LastSeenTime 7         24MAI26    10:02:14 12        24MAI14    10:02:12 18        24MAI30    10:02🕚
+
+Where:
+
+- **TrackID** represents the identifier assigned by the face tracking module.
+- **RegNo** represents the recognized student registration number.
+- **LastSeenTime** represents the most recent frame where the individual was detected.
+
+---
+
+## Handling Face Occlusion
+
+In practical scenarios, students may partially cover their faces or temporarily turn
+away from the camera. If the system already recognized the individual earlier, the
+identity is preserved as long as the tracking module maintains the same TrackID.
+
+Example scenario:
+Frame 1 → Face visible → Recognized (24MAI26) Frame 2 → Face partially covered → Still tracked Frame 3 → Face visible again → Identity retained
+
+This ensures that temporary occlusion does not require the system to perform recognition
+again.
+
+---
+
+## Identity Removal Logic
+
+An identity entry is removed from memory when the tracked person leaves the camera
+coverage area.
+
+Example rule:
+If face not detected for more than 5 seconds → remove TrackID from identity memory
+Copy code
+
+If the person re-enters the camera view later, the recognition process will run again.
+
+---
+
+## Advantages of Identity Memory
+
+The Surveillance-Based Recognition Memory System provides several advantages:
+
+- Reduces redundant face recognition operations
+- Prevents repeated matching of the same individuals
+- Allows the recognition system to focus on unidentified faces
+- Improves attendance speed in crowded classrooms
+- Enables scalable recognition in seminar halls or large lecture environments
+
+Without this mechanism, the recognition system may repeatedly process the most visible
+faces while ignoring other students. With identity memory enabled, the system gradually
+identifies **all individuals present in the environment**.
+
+---
+
+## Role in Attendance System
+
+In a seminar hall or classroom containing many students, the system continuously scans
+the environment and identifies new individuals. Once a student is recognized and
+attendance is recorded, the system avoids re-processing that same student until they
+leave the camera area.
+
+This approach ensures that the attendance process becomes faster and more efficient,
+even when hundreds of students are present in the monitored area.
+
 # 23 Notes and Design Ideas
 
 (Add new ideas or system improvements here during development.)

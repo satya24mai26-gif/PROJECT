@@ -487,6 +487,14 @@ leave the camera area.
 This approach ensures that the attendance process becomes faster and more efficient,
 even when hundreds of students are present in the monitored area.
 
-# 23 Notes and Design Ideas
+# 23 Technical Logic:
+
+Step 1: Detection & Tracking: Use a fast detector (like YOLOv8-face) and assign a TrackID.
+Step 2: Memory Check: * If TrackID is in Recognized_List: Display the stored Name/ID. Skip FAISS.Else: Proceed to Step 3.
+Step 3: Quality Filter: Before running FAISS, check if the face is clear (minimum resolution and "head-on" angle). If it’s too blurry, wait for a better frame.
+Step 4: Identification: Run the embedding through FAISS.If Distance < Threshold: Move TrackID to Recognized_List and log attendance.Else: Mark as "Unknown/Searching."
+Step 5: Cleanup: If TrackID is not seen for $X$ frames, delete from Recognized_List.
+
+# 24 Notes and Design Ideas
 
 (Add new ideas or system improvements here during development.)
